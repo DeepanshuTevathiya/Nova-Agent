@@ -84,7 +84,3 @@ into the search bar, and hit **Research**.
   on the LLM and search/scrape latency.
 - If a step fails (e.g. a scrape error or a rate-limited API), the UI surfaces the error
   instead of crashing, so you can retry.
-
-## License
-
-Add your preferred license here (e.g. MIT).
