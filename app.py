@@ -1,6 +1,7 @@
 import streamlit as st
 from datetime import datetime
 import traceback
+from groq import RateLimitError
 
 from agent import get_search_agent, get_reader_agent, writer_chain, critic_chain
 
@@ -32,13 +33,8 @@ def card(content_md: str, extra_class: str = ""):
 def run_pipeline(topic: str, status_box):
     state = {}
 
-    print("writer_chain:", type(writer_chain), writer_chain)  #Need to Remove
-    print("critic_chain:", type(critic_chain), critic_chain)  #Need to Remove
-
     status_box.update(label="🔎  Casting a wide net across the web...", state="running")
     search_agent = get_search_agent()
-    print("search_agent:", type(search_agent), search_agent)  #Need to Remove
-    print("Before search invoke")  #Need to Remove
     search_results = search_agent.invoke(
         {"messages": f"Find recent, reliable and detailed information about: {topic}"}
     )
@@ -46,8 +42,6 @@ def run_pipeline(topic: str, status_box):
 
     status_box.update(label="📖  Reading the most promising source...", state="running")
     reader_agent = get_reader_agent()
-    print("reader_agent:", type(reader_agent), reader_agent)  #Need to Remove
-    print("Before reader invoke")  #Need to Remove
     reader_results = reader_agent.invoke(
         {
             "messages": f"""Based on the following search results about '{topic}',
@@ -105,6 +99,38 @@ st.markdown(
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
+:root {
+    --app-bg: linear-gradient(180deg, #FFF9F2 0%, #FFF3E9 40%, #FFFFFF 100%);
+    --surface: #FFFFFF;
+    --surface-soft: #FFF3E9;
+    --surface-tint: #FFF9F2;
+    --text: #16161F;
+    --text-soft: #26263A;
+    --muted: #6A6A7A;
+    --muted-strong: #4A4A5A;
+    --border: rgba(0,0,0,0.08);
+    --border-soft: rgba(0,0,0,0.06);
+    --input-border: #EFE6FF;
+    --shadow: rgba(0,0,0,0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --app-bg: linear-gradient(180deg, #17151D 0%, #211A27 42%, #111217 100%);
+        --surface: #24212B;
+        --surface-soft: #2A2331;
+        --surface-tint: #1D1924;
+        --text: #F8F5FC;
+        --text-soft: #EEE8F4;
+        --muted: #B9B0C5;
+        --muted-strong: #D9D0E2;
+        --border: rgba(255,255,255,0.14);
+        --border-soft: rgba(255,255,255,0.10);
+        --input-border: #5A416F;
+        --shadow: rgba(0,0,0,0.28);
+    }
+}
+
 html { scroll-behavior: smooth; }
 html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 h1, h2, h3, .brand, .hero-title { font-family: 'Space Grotesk', sans-serif; }
@@ -119,7 +145,7 @@ h1, h2, h3, .brand, .hero-title { font-family: 'Space Grotesk', sans-serif; }
 .block-container { padding-top: 1rem !important; max-width: 1150px; }
 
 [data-testid="stAppViewContainer"] {
-    background: linear-gradient(180deg, #FFF9F2 0%, #FFF3E9 40%, #FFFFFF 100%);
+    background: var(--app-bg);
 }
 
 /* ---------- floating vibrant blobs ---------- */
@@ -153,13 +179,13 @@ h1, h2, h3, .brand, .hero-title { font-family: 'Space Grotesk', sans-serif; }
     display: flex; align-items: center; justify-content: space-between;
     padding: 18px 6px; margin-bottom: 10px;
     backdrop-filter: blur(10px);
-    background: rgba(255,249,242,0.75);
-    border-bottom: 1px solid rgba(0,0,0,0.06);
+    background: color-mix(in srgb, var(--surface-tint) 82%, transparent);
+    border-bottom: 1px solid var(--border-soft);
 }
-.brand { font-weight: 800; font-size: 1.35rem; color: #1a1a2e; display:flex; align-items:center; gap:8px;}
+.brand { font-weight: 800; font-size: 1.35rem; color: var(--text); display:flex; align-items:center; gap:8px;}
 .brand span.dot { color: #FF3D81; }
 .nav-links a {
-    color: #4a4a5a; text-decoration: none; font-weight: 500; margin-left: 26px; font-size: 0.95rem;
+    color: var(--muted-strong); text-decoration: none; font-weight: 500; margin-left: 26px; font-size: 0.95rem;
     transition: color 0.15s ease;
 }
 .nav-links a:hover { color: #FF3D81; }
@@ -173,7 +199,7 @@ h1, h2, h3, .brand, .hero-title { font-family: 'Space Grotesk', sans-serif; }
     margin-bottom: 22px; border: 1px solid rgba(124,42,160,0.15);
 }
 .hero-title {
-    font-size: 3.4rem; font-weight: 800; line-height: 1.08; color: #16161f;
+    font-size: 3.4rem; font-weight: 800; line-height: 1.08; color: var(--text);
     margin-bottom: 14px;
 }
 .hero-title .grad {
@@ -183,7 +209,7 @@ h1, h2, h3, .brand, .hero-title { font-family: 'Space Grotesk', sans-serif; }
     animation: shine 6s linear infinite;
 }
 @keyframes shine { to { background-position: 200% center; } }
-.hero-sub { font-size: 1.12rem; color: #5c5c6e; max-width: 620px; margin: 0 auto 36px; line-height: 1.6; }
+.hero-sub { font-size: 1.12rem; color: var(--muted); max-width: 620px; margin: 0 auto 36px; line-height: 1.6; }
 
 /* ---------- marquee ---------- */
 .marquee-wrap { overflow: hidden; position: relative; z-index: 1; padding: 14px 0 30px;
@@ -192,16 +218,16 @@ h1, h2, h3, .brand, .hero-title { font-family: 'Space Grotesk', sans-serif; }
 .marquee { display: flex; width: max-content; gap: 14px; animation: scroll 20s linear infinite; }
 .marquee span {
     white-space: nowrap; padding: 9px 20px; border-radius: 999px; font-weight: 600; font-size: 0.9rem;
-    background: white; border: 1px solid rgba(0,0,0,0.08); color: #3a3a4a;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.04);
+    background: var(--surface); border: 1px solid var(--border); color: var(--muted-strong);
+    box-shadow: 0 4px 14px var(--shadow);
 }
 @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
 /* ---------- search bar ---------- */
 .search-zone { position: relative; z-index: 2; max-width: 720px; margin: 0 auto; }
 div[data-testid="stTextInput"] input {
-    background: white !important; border: 2px solid #efe6ff !important; border-radius: 999px !important;
-    padding: 14px 22px !important; font-size: 1.05rem !important; color: #16161f !important;
+    background: var(--surface) !important; border: 2px solid var(--input-border) !important; border-radius: 999px !important;
+    padding: 14px 22px !important; font-size: 1.05rem !important; color: var(--text) !important;
     box-shadow: 0 10px 30px rgba(124,92,255,0.12);
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -221,18 +247,18 @@ div[data-testid="stTextInput"] label { display: none; }
 
 .chip-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
 .chip-row button {
-    background: white !important; color: #4a4a5a !important; border: 1px solid rgba(0,0,0,0.08) !important;
+    background: var(--surface) !important; color: var(--muted-strong) !important; border: 1px solid var(--border) !important;
     box-shadow: none !important; font-weight: 500 !important; font-size: 0.85rem !important;
     padding: 6px 14px !important; border-radius: 999px !important; width: auto !important;
 }
 .chip-row button:hover { border-color: #FF3D81 !important; color: #FF3D81 !important; transform: none !important; }
 
 /* ---------- how it works ---------- */
-.section-title { text-align: center; font-size: 1.9rem; font-weight: 800; color: #16161f; margin: 70px 0 6px; }
-.section-sub { text-align: center; color: #6a6a7a; margin-bottom: 36px; }
+.section-title { text-align: center; font-size: 1.9rem; font-weight: 800; color: var(--text); margin: 70px 0 6px; }
+.section-sub { text-align: center; color: var(--muted); margin-bottom: 36px; }
 .step-card {
-    background: white; border-radius: 20px; padding: 26px 20px; text-align: left;
-    border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 8px 24px rgba(0,0,0,0.04);
+    background: var(--surface); border-radius: 20px; padding: 26px 20px; text-align: left;
+    border: 1px solid var(--border-soft); box-shadow: 0 8px 24px var(--shadow);
     transition: transform 0.2s ease, box-shadow 0.2s ease; height: 100%;
 }
 .step-card:hover { transform: translateY(-6px); box-shadow: 0 16px 32px rgba(124,92,255,0.16); }
@@ -240,42 +266,55 @@ div[data-testid="stTextInput"] label { display: none; }
     width: 46px; height: 46px; border-radius: 14px; display: flex; align-items: center; justify-content: center;
     font-size: 1.3rem; margin-bottom: 14px;
 }
-.step-card h4 { margin: 0 0 6px; font-size: 1.05rem; color: #16161f; }
-.step-card p { margin: 0; color: #6a6a7a; font-size: 0.9rem; line-height: 1.5; }
+.step-card h4 { margin: 0 0 6px; font-size: 1.05rem; color: var(--text); }
+.step-card p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
 
 /* ---------- report cards ---------- */
 .report-card {
-    background: white; border-radius: 20px; padding: 1.8rem 2rem; margin-top: 6px;
-    border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    color: #26263a; line-height: 1.7;
+    background: var(--surface); border-radius: 20px; padding: 1.8rem 2rem; margin-top: 6px;
+    border: 1px solid var(--border-soft); box-shadow: 0 10px 30px var(--shadow);
+    color: var(--text-soft); line-height: 1.7;
 }
-.report-card h1, .report-card h2, .report-card h3 { color: #16161f; }
+.report-card h1, .report-card h2, .report-card h3 { color: var(--text); }
 .report-card a { color: #7C5CFF; }
 .fade-up { animation: fadeUp 0.6s ease both; }
 @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
 
-[data-testid="stTabs"] button { color: #7a7a8a; font-weight: 600; border-radius: 999px !important; }
+[data-testid="stTabs"] button { color: var(--muted); font-weight: 600; border-radius: 999px !important; }
 [data-testid="stTabs"] button[aria-selected="true"] {
     color: white !important; background: linear-gradient(135deg, #FF3D81, #7C5CFF) !important;
 }
-[data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 8px; background: #FFF3E9; padding: 6px; border-radius: 999px; }
+[data-testid="stTabs"] [data-baseweb="tab-list"] { gap: 8px; background: var(--surface-soft); padding: 6px; border-radius: 999px; }
 [data-testid="stExpander"] {
-    background: white; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; box-shadow: 0 6px 18px rgba(0,0,0,0.03);
+    background: var(--surface); border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: 0 6px 18px var(--shadow);
 }
-[data-testid="stStatus"] { background: white; border: 1px solid rgba(0,0,0,0.06); border-radius: 16px; }
+[data-testid="stStatus"] { background: var(--surface); border: 1px solid var(--border-soft); border-radius: 16px; }
 
 /* ---------- footer ---------- */
 .footer {
-    margin-top: 90px; padding: 34px 10px 20px; text-align: center; color: #8a8a9a; font-size: 0.88rem;
-    border-top: 1px solid rgba(0,0,0,0.06);
+    margin-top: 90px; padding: 34px 10px 20px; text-align: center; color: var(--muted); font-size: 0.88rem;
+    border-top: 1px solid var(--border-soft);
 }
 .footer .brand { justify-content: center; font-size: 1.1rem; margin-bottom: 6px;}
 .footer-links { margin-top: 10px; }
-.footer-links a { color: #6a6a7a; text-decoration: none; margin: 0 10px; font-weight: 500; }
+.footer-links a { color: var(--muted); text-decoration: none; margin: 0 10px; font-weight: 500; }
 .footer-links a:hover { color: #FF3D81; }
 
 ::-webkit-scrollbar { width: 10px; }
-::-webkit-scrollbar-thumb { background: #ffd0e2; border-radius: 8px; }
+::-webkit-scrollbar-thumb { background: #FF7EAD; border-radius: 8px; }
+
+@media (prefers-color-scheme: dark) {
+    [data-testid="stAppViewContainer"], [data-testid="stHeader"] { color: var(--text); }
+    .pill-tag { background: linear-gradient(90deg, #4A263E, #30264F); color: #F4C4DE; border-color: rgba(255,180,220,0.25); }
+    .marquee span, .step-card, .report-card, [data-testid="stExpander"], [data-testid="stStatus"] {
+        color: var(--text-soft);
+    }
+    div[data-testid="stTextInput"] input::placeholder { color: #A9A0B4 !important; opacity: 1; }
+    .chip-row button:hover { background: #332536 !important; }
+    [data-testid="stTabs"] [data-baseweb="tab-list"] { border: 1px solid var(--border-soft); }
+    [data-testid="stExpander"] summary, [data-testid="stStatus"] summary { color: var(--text-soft); }
+    .footer-links a { color: var(--muted); }
+}
 </style>
 """,
     unsafe_allow_html=True,
@@ -407,12 +446,14 @@ if run_clicked:
                     "state": result_state,
                 }
             )
-        except Exception:
+        except RateLimitError:
+            status_box.update(label="Rate limit reached", state="error")
+            st.error(
+                "💸 Rate limit reached. Same reason I'm applying for internships... broke and grinding. Try again shortly."
+            )
+        except Exception as e:
             status_box.update(label="Research failed", state="error")
-            st.exception(traceback.format_exc())
-        # except Exception as e:
-        #     status_box.update(label="Research failed", state="error")
-        #     st.error(f"Something went wrong while running the pipeline: {e}")
+            st.error(f"Something went wrong while running the pipeline: {e}")
 
 # ---------------------------------------------------------------------------
 # Results

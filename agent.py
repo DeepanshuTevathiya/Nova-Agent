@@ -10,7 +10,7 @@ from typing import List
 
 load_dotenv()
 
-llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0.4, max_tokens=1200)
+llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0.4, max_tokens=800)
 # llm = init_chat_model(model="openai/gpt-oss-20b", model_provider="groq")
 parser = StrOutputParser()
 
