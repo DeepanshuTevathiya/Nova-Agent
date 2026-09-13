@@ -1,20 +1,32 @@
 from tools import scrape_tool, search_tool
 from langchain.agents import create_agent
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
+from langchain.chat_models import init_chat_model
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
+from pydantic import BaseModel, Field
+from typing import List
 
 load_dotenv()
 
-llm = ChatOpenAI(model="gpt-5.4-mini-2026-03-17", temperature=0)
+llm = ChatGroq(model="openai/gpt-oss-20b", temperature=0.4, max_tokens=1200)
+# llm = init_chat_model(model="openai/gpt-oss-20b", model_provider="groq")
 parser = StrOutputParser()
 
-def get_search_agent():
+# class searchResultformat(BaseModel):
+#     Title:str = Field(description="Title of the search result.")
+#     Url:List[str] = Field(description="Urls that contain the info about asked query.")
+#     Content:str = Field(description="Content about the query.")
+
+def get_search_agent(llm=llm):
     return create_agent(
-        model = llm,
-        system_prompt="Using the tool in mendatory, Always provide results in format,\nTitle:...\nURL:...\nContent:...",
-        tools = [search_tool]
+        model=llm,
+        system_prompt=(
+            "Use the search tool. Always provide results in this format:\n"
+            "Title: ...\nURL: ...\nContent: ..."
+        ),
+        tools=[search_tool],
     )
 
 

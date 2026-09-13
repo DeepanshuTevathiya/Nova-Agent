@@ -26,7 +26,7 @@ def scrape_tool(url: str) -> str:
     """Scrape and return clean text content from a given URL for deeper reading."""
     try:
         resp = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
-        soup = BeautifulSoup(resp.text, "html.parser")
+        soup = BeautifulSoup(resp.text, "html.parser")  #convert to tree structure.
         for tag in soup(["script", "style", "nav", "footer"]):
             tag.decompose()
         return soup.get_text(separator=" ", strip=True)[:3000]

@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import datetime
+import traceback
 
 from agent import get_search_agent, get_reader_agent, writer_chain, critic_chain
 
@@ -31,8 +32,13 @@ def card(content_md: str, extra_class: str = ""):
 def run_pipeline(topic: str, status_box):
     state = {}
 
+    print("writer_chain:", type(writer_chain), writer_chain)  #Need to Remove
+    print("critic_chain:", type(critic_chain), critic_chain)  #Need to Remove
+
     status_box.update(label="🔎  Casting a wide net across the web...", state="running")
     search_agent = get_search_agent()
+    print("search_agent:", type(search_agent), search_agent)  #Need to Remove
+    print("Before search invoke")  #Need to Remove
     search_results = search_agent.invoke(
         {"messages": f"Find recent, reliable and detailed information about: {topic}"}
     )
@@ -40,6 +46,8 @@ def run_pipeline(topic: str, status_box):
 
     status_box.update(label="📖  Reading the most promising source...", state="running")
     reader_agent = get_reader_agent()
+    print("reader_agent:", type(reader_agent), reader_agent)  #Need to Remove
+    print("Before reader invoke")  #Need to Remove
     reader_results = reader_agent.invoke(
         {
             "messages": f"""Based on the following search results about '{topic}',
@@ -54,12 +62,14 @@ def run_pipeline(topic: str, status_box):
         f"SEARCH RESULTS:\n {state['search_results']}",
         f"SCRAPED CONTENT:\n {state['scraped_content']}",
     )
+    print("Before writer invoke")  #Need to Remove
     report = writer_chain.invoke(
         {"topic": topic, "research": combined_research, "report": None, "feedback": None}
     )
     state["report"] = to_text(report)
 
     status_box.update(label="🧠  Critiquing the draft...", state="running")
+    print("Before critic invoke")  #Need to Remove
     improvements = critic_chain.invoke({"report": state["report"]})
     state["improvements"] = to_text(improvements)
 
@@ -397,9 +407,12 @@ if run_clicked:
                     "state": result_state,
                 }
             )
-        except Exception as e:
+        except Exception:
             status_box.update(label="Research failed", state="error")
-            st.error(f"Something went wrong while running the pipeline: {e}")
+            st.exception(traceback.format_exc())
+        # except Exception as e:
+        #     status_box.update(label="Research failed", state="error")
+        #     st.error(f"Something went wrong while running the pipeline: {e}")
 
 # ---------------------------------------------------------------------------
 # Results
