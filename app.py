@@ -177,15 +177,17 @@ h1, h2, h3, .brand, .hero-title { font-family: 'Space Grotesk', sans-serif; }
 .topnav {
     position: sticky; top: 0; z-index: 50;
     display: flex; align-items: center; justify-content: space-between;
-    padding: 18px 6px; margin-bottom: 10px;
+    padding: 18px 16px; margin-bottom: 10px;
     backdrop-filter: blur(10px);
     background: color-mix(in srgb, var(--surface-tint) 82%, transparent);
     border-bottom: 1px solid var(--border-soft);
 }
 .brand { font-weight: 800; font-size: 1.35rem; color: var(--text); display:flex; align-items:center; gap:8px;}
 .brand span.dot { color: #FF3D81; }
+.nav-links { display: flex; align-items: center; gap: 28px; }
 .nav-links a {
-    color: var(--muted-strong); text-decoration: none; font-weight: 500; margin-left: 26px; font-size: 0.95rem;
+    color: var(--muted-strong); text-decoration: none; font-weight: 500; margin-left: 0; font-size: 0.95rem;
+    white-space: nowrap;
     transition: color 0.15s ease;
 }
 .nav-links a:hover { color: #FF3D81; }
